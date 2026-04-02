@@ -5,29 +5,93 @@ Motor Tuning with EL7342 - Procedure
 
 .. image:: img/ipag_logo.png
     :width: 400
+    :align: center
+
+Configuration of the NC task links
+==================================
+With a new TwinCAT project created and your EL7342 module scanned, the first step before starting the tuning procedure is to link your NC task to your EL7342 module. 
+To do so go in the axis of your NC task, in settings, click on the Link To I/O and select your EL7342 terminal.
+
+.. figure:: img/Link_axis_to_term.png
+    :width: 400
+    :align: center
+    
+    Linking the NC task axis to the EL7342 terminal
+
+Now we need to link our limit switch inputs to secure the motor and avoid any damage during the tuning procedure. 
+Go in the inputs of your axis, in *FromPLC > ControlDword* and link link the two FeedEnable inputs to your limit switch inputs. 
+
+.. figure:: img/Limit_switch_link.png
+    :width: 300
+    :align: center
+    
+    Linking the limit switch
+
+Don't forget to push your configuration to the plc with the |activate| button.
+
+.. |activate| image:: img/activate_button.png
+
+Configuration of the NC Task and the EL7342 parameters
+======================================================
+Now we will need to configurate our NC Task and our EL7342 module parameters. 
+This part is not really about tuning, but it is necessary to have a correct configuration before starting the tuning procedure. 
+
+Use the following spreadsheet to have the correct parameters for your motor and the correct configuration of the EL7342. It will also be useful to have the correct units for the tuning parameters of the EL7342, which can be a bit tricky to understand without it.
+
+`Motor Tuning with EL7342 - Google Sheets  <https://docs.google.com/spreadsheets/d/1AWgOfwWHZM1icJWqUJhcqb1S85XH-hp5tlnLiJ5IdK0/edit#gid=2072590852>`_ 
+
+For this part you will need the first two sheet of the document (NC Configuration and EL7342 Configuration).
+In the NC Configuration sheet, enter your motor's characteristics in the first table. 
+
+Then just Take the calculated values and copy them in The NC task and EL7342 CoE Online configurations of your project. 
 
 
 
+Create a YT chart
+=================
+To visualize the changes of the motor's velocity and position during the tuning procedure, we will be using a YT chart.
+To create a YT chart, open a new twinCAT project and select a visualization project.
+
+.. figure:: img/yt_chart.png
+   :width: 600
+   :align: center
+
+   Creating a YT chart project
+
+Then in the datapool of your project go to the NC-Task, select your motor's axis and add the following variables to your data pool :
+- Actual Velocity
+- Set Velocity
+- Actual Position
+- Set Position 
+- Position Error (or PosDiff)
+
+You can display the velocity, position and position error on three different axes to have a better veiw of the motor's behavior during the tuning procedure.
+
+.. figure:: img/yt_chart_datapool.png
+   :width: 600
+   :align: center
+
+   Adding variables to the data pool of the YT chart project
 
 Velocity Control Loop Tuning
 ============================
 
-With the motor configuration set, the YT Scope project ready, we can now focus on the tuning part of the procedure.
+With the motor configuration and the YT chart set, we can now focus on the tuning part of the procedure.
 
 The Velocity Control Loop will be managed by the EL7342, the input velocity is managed by the NC. We will first focus on the EL7342 tuning.
 
 .. warning:: 
 
-   REMINDER :  you  The tuning can be affected by the cycle time associated to the NC. It is recommended  to set this task to 1 ms before any tuning,  for better results and less oscillations.  Go to the "Motor and software configuration" chapter II part 1 to set the correct cycle time.
-
+   REMINDER :  The tuning can be affected by the cycle time associated to the NC. It is recommended  to set this task to 1 ms before any tuning,  for better results and less oscillations.  Go to the "Motor and software configuration" chapter II part 1 to set the correct cycle time.
 
 Configurating the Mode
 ----------------------
 
-To have our EL7342 working as a velocity control loop, we have to setup some parameters in the Process Data and the CoE Online. Left click on the right Terminal EL7342 (if you have multiple), and go in the Process Data window.
+To have our EL7342 working as a velocity control loop, we have to setup some parameters in the Process Data and the CoE Online. Left click on your Terminal EL7342, and go in the Process Data window.
 
 .. figure:: img/mode_config.png
    :width: 600
+   :align: center
 
    Needed Process Data are automaticaly chosen when selecting Velocity control compact with info data
 
@@ -35,7 +99,8 @@ In the Predefined PDO Assignment, select the Velocity control compact with info 
 
 
 .. figure:: img/pdo_assign.png
-   :width: 600    
+   :width: 600
+   :align: center    
    
    Operation Mode shall be automatic (will follow the PDO assignment)  
 
@@ -52,16 +117,18 @@ To tune our motor, we will be using the Ziegler-Nichols method. In the CoE Onlin
 
 .. image:: img/dcm_8023.png
    :width: 600
+   :align: center
    
 
 
 **Start by setting both Ki and Kd to 0.**
 
-The Ziegler-Nichols method's first step is to find the gain Kp ultimate to which the motor is no longer stable, and start oscillating. 
+The Ziegler-Nichols method's first step is to find the ultimate Kp gain to which the velocity of the motor is no longer stable, and start oscillating. 
 Increase the Kp factor, **to update the changes, disable and enable again the controller on the NC panel.**
 
 .. figure:: img/nc_startup.png
     :width: 600
+    :align: center
 
     Enable and Disable control in order to update changes in CoE Online assignment. (it might be a better way ?) 
 
@@ -76,30 +143,31 @@ Once the changes are updated, go in the function panel :
 
 .. figure:: img/function_pan.png
     :width: 600
+    :align: center
     
     The Velo step Sequence is necessary to bypass the NC position control loop   
 
 Use the Velo Step Sequence function to send velocity commands to the motor. **This function is the only way to send a Velocity command directly to the module velocity control loop.  Other functions go through the position control loop of the NC and thus, will change the gain Kp ultimate.**
 
-The velocity command is sent to the EL7342 through a 16 bits integer (with one bit for the sign). The NC task is using the reference velocity parameter to scale the input velocity (in user units) to the 16 bits velocity command :
-e.g. if the reference velocity is 2 mm/s and a command of 1mm/s is triggered, the NC task will send a command of  :math:`2^{15}/2 = 16384` . 
-
-Create a YT chart to display both the actual velocity and the set velocity to visualize your motor's behavior.
+Use the YT chart to visualize your motor's behavior. Here, we will be looking at the velocity of the motor so you don't need to display the position on the YT chart for now.
 
 .. _scope_vel:
 .. figure:: img/scope1.png
     :width: 700
+    :align: center
 
-    *Actual Velocity* (blue)  and *Set Velocity* (green) in mm/s of an oscillating motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
+    *Actual Velocity* (blue) and *Set Velocity* (green) in mm/s of an oscillating motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
 
 In our example, the motor started being unstable at Kp = 1200. Our gain Kp ultimate (Ku) is 1200.
 Using the YT Chart, zoom on the oscillations to measure the oscillation frequency.
+
 Reminder : Use the zoom tool to zoom on the oscillations and click it once to do an automatic Y zoom !
 
 .. figure:: img/scope2.png
    :width: 700
+   :align: center
 
-   Zoomed in  *Actual Velocity* (blue)  and *Set Velocity* (green) in mm/s of an oscillating motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
+   Zoomed in *Actual Velocity* (blue) and *Set Velocity* (green) in mm/s of an oscillating motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
 
 
 .. tip::
@@ -123,6 +191,7 @@ Using the same spreadsheet as previously, we can enter our two Ku and Tu values 
 
 .. figure:: img/spreadsheet1.png
     :width: 700
+    :align: center
     
     Spreadsheet screenshot
     
@@ -132,6 +201,7 @@ The Ziegler-Nichols method gives us the following configuration on our velocity 
 
 .. figure:: img/dcm_8023_2.png
     :width: 400
+    :align: center
     
     EL7342 Control parameters for this exmemple 
 
@@ -143,6 +213,7 @@ And the final tuning results gives the following behavior :
 
 .. figure:: img/result_tuning.png
     :width: 700
+    :align: center
     
     *Actual Velocity* (blue) and *Set Velocity* (red) (mm/s) of a correctly tuned motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
 
@@ -158,8 +229,9 @@ A. Small Oscillations
 
 .. figure:: img/small_scillations.png
    :width: 700
+   :align: center
 
-   Actual Velocity (blue)  and Set Velocity (red)  (mm/s) of a badly tuned motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
+   Actual Velocity (blue) and Set Velocity (red) (mm/s) of a badly tuned motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
 
 
 **Symptoms :** 
@@ -176,8 +248,9 @@ B. Slow Answer
 
 .. figure:: img/slow_answer.png
    :width: 700
+   :align: center
    
-   Actual Velocity (blue) and Set Velocity (red)  (mm/s) of a badly tuned motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
+   Actual Velocity (blue) and Set Velocity (red) (mm/s) of a badly tuned motor M112-2DG1 on a YT Chart on a Velo Step Sequence function
 
 
 **Symptoms :** 
@@ -193,11 +266,12 @@ B. Slow Answer
 Saving configuration parameters
 -------------------------------
 
-Once you've finished tuning your motor, you will need to save your configuration in order to be able to, for example, replace your module EL7342 without losing your configuration.
+Once you've finished tuning your motor, you will need to save your configuration in order to be able to replace your module EL7342 without losing your configuration.
 
 
 .. figure:: img/startup_parameters.png
    :width: 700
+   :align: center
 
    Parameters saved in the startup configuration 
 
@@ -206,6 +280,7 @@ By clicking "New", you can add registers that will be configurated everytime you
 
 .. figure:: img/startup_param_edit.png
    :width: 700
+   :align: center
 
    Panel to edit startup parameters 
 
@@ -213,114 +288,86 @@ From here, it works as the CoE Online register configuration method previously u
 
 .. figure:: img/startup_param_save.png
    :width: 700
+   :align: center
 
 To save a parameter, select the register, enter its value and click OK. You will need to repeat this process for each registers.
 
-
-
-`Motor Tuning with EL7342 - Google Sheets  <https://docs.google.com/spreadsheets/d/1AWgOfwWHZM1icJWqUJhcqb1S85XH-hp5tlnLiJ5IdK0/edit#gid=2072590852>`_ 
 
 Position Control Loop Tuning
 ============================
 
 Now that our motor's velocity is controlled and tuned by the EL7342, we can start working on the NC task and its position control loop.
-The controller of the NC task is configurated in the Ctrl of our Axis.
+The controller of the NC task is configurated in the Ctrl part of our Axis.
 
 .. figure:: img/nc_nav.png
+   :align: center
 
 Two windows will be interesting for us : The NC-Controller and the Parameter.
 The goal of this position control loop is to make the positioning of the motor as accurate as possible. We give it a position command, we want it to get there as precisely as possible and as fast as possible.
 
-Controler Choice
-----------------
+**A Finding the ultimate Gain Ku**
+----------------------------------
 
-To complete our precision goal, we will be using the Position controller with two P constants (with Ka) that can be selected in the NC-Controller window.
-
-
-.. figure:: img/controller_choice.png
-   :width: 700
-
-This controller offers us multiple parameters to setup our position control loop.
-
-.. figure:: img/control_loop_options_1.png
-
-
-Tuning Parameters 
------------------
-
-To tune our motor, we will be visualizing the changes of our parameters while the motor is moving. To do so, we will start a **Reversing Sequence function** in the Function panel of the NC Task (with idle time).
-
-To tune the different parameters of our position controller, we will be using again the **Ziegler-Nichols method** on a Proportional controller.
-We will also need a YT chart with the following data:
-
-.. figure:: img/scope_nav.png
-
-- PosDiff : Position error
-- ActPos : Actual Position of the motor
-- SetPos : Position command sent by the NC task
-
-A Finding the ultimate Gain Ku 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To find our ultimate gain Ku, we will first use a simple Position controller P. (Don't forget to activate configuration to update the controller used)
-
+To find our ultimate gain Ku, we will use a simple Position controller P. (Don't forget to activate configuration to update the controller)
 
 .. figure:: img/nc_control_choice_p.png
-
+   :align: center
 
 The method is the same as the velocity control loop tuning. Increase the Proportional factor Kv of your controller until the motor becomes unstable.
 
 .. figure:: img/p_control_param.png
+   :align: center
 
 Contrary to the EL7342, you can update the changes by selecting the factor you want to change and click Download while the motor is still moving.
 
 **The definition of instability is different on this case**. We will say that our motor becomes unstable when **its actual velocity will have increasing oscillations either while moving or while standing**.
 
+A motor unstable with oscillations on its speed during movement:
+
 .. figure:: img/pos_instability_1.png
    :width: 700
+   :align: center
    
-   Actual Velocity (blue) (mm/s), Actual Position (orange)  (mm) and Position Error (violet) (µm) of an oscillating motor M112-2DG1 on a YT Chart on a Reversing Sequence function
+   Actual Velocity (blue) (mm/s), Actual Position (orange) (mm) and Position Error (violet) (µm) of an oscillating motor M112-2DG1 on a YT Chart on a Reversing Sequence function
 
 
-A motor unstable with oscillations on its speed during movement.
-
-
+A motor unstable with **oscillations on its speed** during standstill:
 
 .. figure:: img/pos_instability_2.png
    :width: 700
+   :align: center
 
    Actual Velocity (blue) (mm/s), Actual Position (orange)  (mm) and Position Error (violet) (µm) of an oscillating motor M403-1DG on a YT Chart on a Reversing Sequence function
 
-A motor unstable with **oscillations on its speed** during standstill.
 
 The goal is to find the ultimate gain Ku. Contrary to the velocity control loop, we do not need to find the oscillating period Tu, since we will only be needing a proportional gain, which doesn't depend on the oscillating period.
 
-B Computing tuning Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**B Computing tuning Parameters**
+---------------------------------
 
-With the ultimate gain Ku found, we are now able to calculate the correct parameters for our new NC controller. Select the "Position controller with two P constants (with Ka)" controller in the NC-Controller window.
+With the ultimate gain Ku found, we are now able to calculate the correct parameters for our new NC controller.
 
-Using the same spreadsheet as before, we can automatically calculate our needed parameters for our position controller, in the "Position Controller" page : 
+Using the same spreadsheet as before, we can automatically calculate our needed parameters in the "Position Controller" page : 
 
 
 `Motor Tuning with EL7342 - Google Sheets  <https://docs.google.com/spreadsheets/d/1AWgOfwWHZM1icJWqUJhcqb1S85XH-hp5tlnLiJ5IdK0/edit#gid=2072590852>`_ 
 
 .. figure:: img/spreadsheet_2.png
+   :align: center
 
-The next steps will use Y marker to have a better view of what's happening with the motor. Check the The YT Scope Project - Electronique et Logiciel Instrumental - WIKI IPAG (osug.fr) chapter to know how to set it up.
+The next steps will use the YT chart Project.
 Enter your motor's characteristics and apply the automatically calculated parameters to your controller. Don't forget to update the changes using the Activating Configuration button |activate|
 
 .. figure:: img/M403_position_tuned.png
    :width: 700
+   :align: center
     
    scope for a Position control loop tuned 
    
 With a well tuned motor, you should now be able to see it stop precisely around the position command given.
 
-
 Improving tuning
 ----------------
-
 
 Some motors, such as small motor as the M112-2DG1 can be harder to tune correctly and get a satisfying position tuning. For that, we have multiple ways to improve our tuning depending on its current behavior.
 
@@ -331,6 +378,7 @@ It is possible that your motor is having trouble following its position while mo
 
 .. figure:: img/Position_error_while_moving.png
    :width: 700
+   :align: center
 
    scope to illustrate a following error  
 
@@ -351,6 +399,7 @@ As for bigger motors, finding the ultimate gain Ku can be tricky. As a reminder,
 
 .. figure:: img/Damaging_velocity_spikes.png
    :width: 700
+   :align: center
 
    scope to illustrate unstable posiotn control loop  
 
@@ -372,10 +421,12 @@ Saving the NC Axis configuration
 --------------------------------
 
 .. figure:: img/saving_nc.png
+   :align: center
 
 To save your motor's axis configuration, go in the NC-Task folder, right click on your motor's axis and click on Save Axis As. It will generate a .xti file, reusable for other applications.
 
 .. figure:: img/saving_xti.png
+   :align: center
 
 Loading a NC Axis configuration
 -------------------------------
@@ -384,6 +435,7 @@ Loading a NC Axis configuration
 To load a saved Axis configuration, it is extremely simple.
 
 .. figure:: img/loading_nc.png
+   :align: center
 
 Right click on the Axes folder of the NC-Task, and Add Existing Item. Select your .xti file, and your configurated Axis will appear.
 
@@ -392,6 +444,7 @@ Make sure that the links with your I/O and PLC are still here (if you had links)
 
 
 .. figure:: img/loading_nc_2.png
+   :align: center
 
 Make sure to have the NC-Task cycle time reduced to its minimum value
 
@@ -403,6 +456,7 @@ We saw previously how to save in the Startup window of the EL7342 the CoE Online
 Right click on the Terminal EL7342, and save Term EL7342 As.
 
 .. figure:: img/saving_module.png
+   :align: center
 
 This will generate a .xti file, reusable like the Axis .xti file.
 
@@ -414,10 +468,12 @@ To load the Terminal EL7342 configuration saved, we will need to have already ou
 Right click on the Terminal you want to load in the configuration, and insert existing item to add another Terminal EL7342.
 
 .. figure:: img/load_module_1.png 
+   :align: center
 
 You may need to remove the original Terminal EL7342.
 
 .. figure:: img/remove_module.png
+   :align: center
 
 And now Activate the configuration |activate|.
 You should now be able to use freely your terminal EL7342 with its saved data !
