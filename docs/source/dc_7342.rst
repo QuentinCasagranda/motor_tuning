@@ -7,6 +7,28 @@ Motor Tuning with EL7342 - Procedure
     :width: 400
     :align: center
 
+Introduction
+============
+This document is a step by step procedure to tune your motor with the EL7342 module. It will cover the whole process, from the configuration of the NC task and the EL7342 parameters, to the tuning of both the velocity and position control loop.
+
+To have a better understanding of what we are going to do let's look at the control loops we will be tuning.
+
+.. figure:: img/control_loop.jpg
+    :width: 700
+    :align: center
+
+    Control loops of the motor with the EL7342 module
+
+We have two control loops to tune, the velocity control loop and the position control loop. The velocity control loop is managed by the EL7342 module, it takes the velocity command from the NC task. The position control loop is managed by the NC task, it takes the position command from the user.
+We don't use the NC task to manage the velocity of the motor because the EL7342 has a much faster cycle time than the NC task that is too slow to manage the velocity control loop efficiently.
+
+The tricky part of this control loop is the interaction between the NC task and the EL7342. The NC task is sending velocity commands to the EL7342 using a 16bits signed integer, this means that the NC task and the EL7342 need to have the same velocity reference for the FSR of this integer. 
+The thing is that they aren't using the same unit in their configuration, the NC task is using mm/s while the EL7342 is using RPM but you need to have the exact value of the FSR in both configuration to have a correct behavior of your motor.
+
+It is also important to select a value for the FSR that is higher than the maximum velocity you want to reach with your motor, otherwise the motor won't be able to correct its velocity efficiently. It is also important to not set it too high to have a good resolution on the velocity command. 
+The spreadsheet provided in this document set it to 125% of the maximum velocity of the motor, which is a good value for the FSR.
+
+
 Configuration of the NC task links
 ==================================
 With a new TwinCAT project created and your EL7342 module scanned, the first step before starting the tuning procedure is to link your NC task to your EL7342 module. 
@@ -105,10 +127,7 @@ In the Predefined PDO Assignment, select the Velocity control compact with info 
    Operation Mode shall be automatic (will follow the PDO assignment)  
 
 In the CoE Online window, look for the Operation mode located in either 8022:01 register if you are using the Channel 1, or 8032:01 if you use the Channel 2. Set the mode to Automatic. In this mode, the EL7342 will automatically be set to the Velocity Control Compact with info data that has been set in the process data.
-Activate the new configuration with |activate|  
-
-.. |activate| image:: img/activate_button.png
-
+Activate the new configuration with |activate| button.
 
 Tuning with Ziegler-Nichols
 ---------------------------
@@ -179,8 +198,10 @@ Reminder : Use the zoom tool to zoom on the oscillations and click it once to do
 In our example, the period time Tu of the oscillations is 18 ms.
 
 With both our Ku and Tu known, we can calculate the optimal parameters for our controller.
-Using the same spreadsheet as previously, we can enter our two Ku and Tu values to automatically obtain our correctors gain with the proper units. (EL7342's units are a bit a mess to understand)
+Using the same spreadsheet as previously, we can enter our two Ku and Tu values to automatically obtain our correctors gain.
+It is not mandatory to use PID controller, you can choose to use a PD, PI or P controller, for eaxample on a M111-1DG, the PID controller is not efficient and a PD controller is enough to have a good behavior of the motor.
 
+You can change the type of controller you want to use in the spreadsheet and see wich gives you the best response.
 
 `Motor Tuning with EL7342 - Google Sheets  <https://docs.google.com/spreadsheets/d/1AWgOfwWHZM1icJWqUJhcqb1S85XH-hp5tlnLiJ5IdK0/edit#gid=2072590852>`_ 
 
@@ -478,4 +499,42 @@ You may need to remove the original Terminal EL7342.
 And now Activate the configuration |activate|.
 You should now be able to use freely your terminal EL7342 with its saved data !
 
+Caracterization of the motor tunning
+====================================
 
+To characterize the tuning of your motor, you can use the YT chart to visualize its behavior under certain circumstances.
+To have an idea of the response of our motor to a level instruction on the velocity, we can use the Velo Step Sequence function.
+
+Send three to four velocity step sequances of 4 cycle with a velocity starting from the nominal velocity of your motor and divide it by ten for each sequence.
+
+.. figure:: img/velo_step_seq.png
+   :width: 700
+   :align: center
+
+   Velo Step Sequence function configuration
+
+This will give you a good idea of the response time of your motor, its overshoot and its behavior at low velocity.
+
+.. figure:: img/velo_step_response.png
+   :width: 700
+   :align: center
+
+For the position precision caracterization, you can use the Reversing Sequence function. It will send a position command to your motor, then a command to go back to the initial position, and repeat this cycle.
+
+.. figure:: img/reversing_seq.png
+   :width: 700
+   :align: center
+
+   Reversing Sequence function configuration
+
+This will give you a good idea of the precision of your motor and its behavior while moving to a position and while standing.
+
+.. figure:: img/position_response.png
+   :width: 700
+   :align: center
+
+If you want to see if the tracking of your motor is good you can send it to a position at a really slow velocity and see if it is able to follow the position command without a big error.
+
+.. figure:: img/slow_position_response.png
+   :width: 700
+   :align: center
