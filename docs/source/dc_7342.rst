@@ -21,7 +21,7 @@ To have a better understanding of what we are going to do let's look at the cont
 
 We have two control loops to tune, the velocity control loop and the position control loop. The velocity control loop is managed by the EL7342 module, it takes the velocity command from the NC task. The position control loop is managed by the NC task, it takes the position command from the user.
 We don't use the NC task to manage the velocity of the motor because the EL7342 has a much faster cycle time than the NC task that is too slow to manage the velocity control loop efficiently.
-
+ 
 The tricky part of this control loop is the interaction between the NC task and the EL7342. The NC task is sending velocity commands to the EL7342 using a 16bits signed integer, this means that the NC task and the EL7342 need to have the same velocity reference for the FSR of this integer. 
 The thing is that they aren't using the same unit in their configuration, the NC task is using mm/s while the EL7342 is using RPM but you need to have the exact value of the FSR in both configuration to have a correct behavior of your motor.
 
@@ -41,7 +41,7 @@ To do so go in the axis of your NC task, in settings, click on the Link To I/O a
     Linking the NC task axis to the EL7342 terminal
 
 Now we need to link our limit switch inputs to secure the motor and avoid any damage during the tuning procedure. 
-Go in the inputs of your axis, in *FromPLC > ControlDword* and link link the two FeedEnable inputs to your limit switch inputs. 
+Go in the inputs of your axis, in *FromPLC > ControlDword* and link the two FeedEnable inputs to your limit switch inputs. 
 
 .. figure:: img/Limit_switch_link.png
     :width: 300
@@ -72,28 +72,40 @@ Then just Take the calculated values and copy them in The NC task and EL7342 CoE
 Create a YT chart
 =================
 To visualize the changes of the motor's velocity and position during the tuning procedure, we will be using a YT chart.
-To create a YT chart, open a new twinCAT project and select a visualization project.
+To create a YT chart, open a new twinCAT project and select measurement wizard.
 
-.. figure:: img/yt_chart.png
+.. figure:: img/Measurement_wizard.png
    :width: 600
    :align: center
 
    Creating a YT chart project
 
-Then in the datapool of your project go to the NC-Task, select your motor's axis and add the following variables to your data pool :
+Then choose a classic chart and for the data select your plc and the nc task of your project.
+
+.. figure:: img/Select_target.png
+   :width: 600
+   :align: center
+
+   Selecting the NC task as data source for the YT chart project
+
+
+
+Now you can take the variables that are interesting for you :
+
 - Actual Velocity
 - Set Velocity
 - Actual Position
 - Set Position 
 - Position Error (or PosDiff)
 
-You can display the velocity, position and position error on three different axes to have a better veiw of the motor's behavior during the tuning procedure.
-
-.. figure:: img/yt_chart_datapool.png
+.. figure:: img/Select_axis_values.png
    :width: 600
    :align: center
 
    Adding variables to the data pool of the YT chart project
+
+You can display the velocity, position and position error on three different axes to have a better veiw of the motor's behavior during the tuning procedure.
+
 
 Velocity Control Loop Tuning
 ============================
@@ -143,22 +155,24 @@ To tune our motor, we will be using the Ziegler-Nichols method. In the CoE Onlin
 **Start by setting both Ki and Kd to 0.**
 
 The Ziegler-Nichols method's first step is to find the ultimate Kp gain to which the velocity of the motor is no longer stable, and start oscillating. 
-Increase the Kp factor, **to update the changes, disable and enable again the controller on the NC panel.**
+Increase the Kp factor, **to update the changes, active the "Auto Update" option or just update list in the CoE Online tab.**
+
+.. figure:: img/Check_auto_update.png
+    :width: 600
+    :align: center
+
+    Active the "Auto Update" option in order to automatically update changes in CoE Online assignment.
+
+
+Once the changes are updated, go in the NC-online panel and activate the controller:
 
 .. figure:: img/nc_startup.png
     :width: 600
     :align: center
 
-    Enable and Disable control in order to update changes in CoE Online assignment. (it might be a better way ?) 
+    Activate the controller in the NC-online panel
 
-.. warning:: 
-
-    Reminder : A shortcut to the NC panel and NC functions is available on the EL7342 window.
-    Common problem : Sometimes, enabling controller by clicking on it will not actually enable the motion. Click instead on All to fix the issue.
-    Disabling the motion while the motor is moving will send the Error 16992 (0x4260), click on the Reset button F8 of the NC panel to reset it
-
-Once the changes are updated, go in the function panel :
-
+Now you can go to the Nc-function panel :
 
 .. figure:: img/function_pan.png
     :width: 600
@@ -505,7 +519,7 @@ Caracterization of the motor tunning
 To characterize the tuning of your motor, you can use the YT chart to visualize its behavior under certain circumstances.
 To have an idea of the response of our motor to a level instruction on the velocity, we can use the Velo Step Sequence function.
 
-Send three to four velocity step sequances of 4 cycle with a velocity starting from the nominal velocity of your motor and divide it by ten for each sequence.
+Send three to four velocity step sequences of 4 cycle with a velocity starting from the nominal velocity of your motor and divide it by ten for each sequence. 
 
 .. figure:: img/velo_step_seq.png
    :width: 700
@@ -519,9 +533,9 @@ This will give you a good idea of the response time of your motor, its overshoot
    :width: 700
    :align: center
 
-For the position precision caracterization, you can use the Reversing Sequence function. It will send a position command to your motor, then a command to go back to the initial position, and repeat this cycle.
+For the position precision caracterization, you can use the online panel. You can mannualy send a sequence with a target position positive then 0 then a target position negative. Alike the velocity step sequence, you can repeat this sequence with different position values, starting from a potition far from the homing position and divide it by ten for each sequence.
 
-.. figure:: img/reversing_seq.png
+.. figure:: img/online_panel.png
    :width: 700
    :align: center
 
