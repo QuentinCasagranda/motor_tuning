@@ -541,6 +541,11 @@ For the position precision caracterization, you can use the online panel. You ca
 
    Reversing Sequence function configuration
 
+.. warning:: 
+
+   TIP :  To control the motor mannually with the online panel, it is important to set the override to 100% to be able to move the motor
+
+
 This will give you a good idea of the precision of your motor and its behavior while moving to a position and while standing.
 
 .. figure:: img/position_response.png
