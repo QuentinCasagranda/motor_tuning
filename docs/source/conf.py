@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Motor Tuning'
-copyright = '2022, Romain Bouche'
-author = 'Romain Bouche'
+copyright = '2026, Romain Bouche and Quentin Casagranda'
+author = 'Romain Bouche and Quentin Casagranda'
 
 # The short X.Y version
-version = ''
+version = '0.2'
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.2'
 
 
 # -- General configuration ---------------------------------------------------
@@ -64,7 +64,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -113,6 +113,9 @@ htmlhelp_basename = 'dc_motor_el7342doc'
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {
+    "figure_align": "H",
+    "classoptions": ",oneside",
+    
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
@@ -130,12 +133,14 @@ latex_elements = {
     # 'figure_align': 'htbp',
 }
 
+latex_show_urls = "footnote"
+
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'dc_motor_el7342.tex', 'dc\\_motor\\_el7342 Documentation',
-     'Romain Bouche', 'manual'),
+     author, 'manual'),
 ]
 
 
@@ -184,7 +189,13 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+extensions = [
+    "sphinx.ext.intersphinx",
+]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+}
 
 # -- Options for todo extension ----------------------------------------------
 
